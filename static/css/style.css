@@ -11,12 +11,12 @@ body {
     color: #0f0;
     font-family: 'Fira Code', monospace;
     font-size: 14px;
-    height: 100vh;
+    height: 100dvh; /* vhからdvhに変更 */
     overflow: hidden;
 }
 
 .terminal {
-    height: 100vh;
+    height: 100dvh; /* vhからdvhに変更 */
     display: flex;
     flex-direction: column;
     max-width: 1200px;
@@ -149,8 +149,9 @@ body {
     border: none;
     color: #0f0;
     font-family: inherit;
-    font-size: inherit;
+    font-size: 16px; /* Safariの自動ズームを無効化 */
     outline: none;
+    min-width: 0; /* flexアイテムのはみ出しを防止 */
 }
 
 /* 入力エリア全体 */
