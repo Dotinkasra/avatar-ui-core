@@ -3,6 +3,7 @@
 """
 
 import os
+import secrets
 
 from dotenv import load_dotenv
 
@@ -10,16 +11,32 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ===========================================
-# 必須設定（環境変数が設定されていない場合はエラー）
+# AIプロバイダー設定
 # ===========================================
+AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini")  # "gemini" or "ollama"
 
-# AI設定
-GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]  # Gemini APIキー
-MODEL_NAME = os.environ["MODEL_NAME"]  # 使用するGeminiモデル
+# ===========================================
+# 必須設定（プロバイダーに応じて分岐）
+# ===========================================
+GEMINI_API_KEY = None
+OLLAMA_HOST = None
+if AI_PROVIDER == "gemini":
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    if not GEMINI_API_KEY:
+        raise ValueError("AI_PROVIDERがgeminiの場合、GEMINI_API_KEYは必須です。")
+elif AI_PROVIDER == "ollama":
+    OLLAMA_HOST = os.getenv("OLLAMA_HOST")
+    if not OLLAMA_HOST:
+        raise ValueError("AI_PROVIDERがollamaの場合、OLLAMA_HOSTは必須です。")
+else:
+    raise ValueError(f"無効なAI_PROVIDERです: {AI_PROVIDER}")
 
 # ===========================================
 # 任意設定（デフォルト値あり）
 # ===========================================
+
+# モデル設定
+MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.0-flash" if AI_PROVIDER == "gemini" else "llama3:latest")
 
 # アバター設定
 AVATAR_NAME = os.getenv("AVATAR_NAME", "Spectra")
@@ -37,6 +54,8 @@ SYSTEM_INSTRUCTION = os.getenv(
 SERVER_HOST = os.getenv("SERVER_HOST", "127.0.0.1")
 SERVER_PORT = int(os.getenv("SERVER_PORT", "5000"))
 DEBUG_MODE = os.getenv("DEBUG_MODE", "True").lower() == "true"
+FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", secrets.token_hex(16))
+
 
 # UI設定
 TYPEWRITER_DELAY_MS = int(os.getenv("TYPEWRITER_DELAY_MS", "50"))
