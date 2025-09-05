@@ -65,7 +65,7 @@ export class ChatManager {
     // メッセージ送信
     async sendMessage(message, fileData) {
         // ユーザーメッセージを画面に追加
-        this.addLine(message, 'user', fileData);
+        this.addLine(message, 'user', fileData ? fileData.dataUrl : null);
         
         const formData = new FormData();
         formData.append('message', message);
@@ -99,15 +99,14 @@ export class ChatManager {
     }
 
     // メッセージを画面に追加
-    async addLine(text, type, fileData = null) {
+    async addLine(text, type, imageUrl = null) {
         const line = document.createElement('div');
         line.className = 'line ' + type;
         
         if (type === 'user') {
             let content = `<span class="user-prompt">USER&gt;</span> ${text}`;
-            if (fileData) {
-                content += `<br><img src="${fileData.dataUrl}" alt="Uploaded image">`;
-                content += `<div class="chat-image-filename">${fileData.file.name}</div>`;
+            if (imageUrl) {
+                content += `<br><img src="${imageUrl}" alt="Uploaded image">`;
             }
             line.innerHTML = content;
             this.output.appendChild(line);
