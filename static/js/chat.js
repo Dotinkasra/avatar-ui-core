@@ -15,7 +15,7 @@ export class ChatManager {
         this.fileNameDisplay = document.getElementById('file-name-display');
         this.removeImageBtn = document.getElementById('remove-image-btn');
 
-        this.uploadedFile = null; // アップロードされたファイルを保持
+        this.uploadedFileData = null; // アップロードされたファイルとDataURLを保持
         
         this.initEventListeners();
     }
@@ -26,8 +26,8 @@ export class ChatManager {
         this.input.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
                 const message = this.input.value.trim();
-                if (message || this.uploadedFile) {
-                    await this.sendMessage(message, this.uploadedFile);
+                if (message || this.uploadedFileData) {
+                    await this.sendMessage(message, this.uploadedFileData);
                 }
             }
         });
@@ -43,29 +43,34 @@ export class ChatManager {
     handleImageUpload(event) {
         const file = event.target.files[0];
         if (file) {
-            this.uploadedFile = file;
             this.fileNameDisplay.textContent = file.name;
             this.fileDisplayContainer.style.display = 'flex';
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.uploadedFileData = { file: file, dataUrl: e.target.result };
+            };
+            reader.readAsDataURL(file);
         }
     }
 
     // 選択された画像を削除
     removeImage() {
-        this.uploadedFile = null;
+        this.uploadedFileData = null;
         this.imageUpload.value = ''; // ファイル選択をリセット
         this.fileNameDisplay.textContent = '';
         this.fileDisplayContainer.style.display = 'none';
     }
 
     // メッセージ送信
-    async sendMessage(message, imageFile) {
+    async sendMessage(message, fileData) {
         // ユーザーメッセージを画面に追加
-        this.addLine(message, 'user', imageFile ? imageFile.name : null);
+        this.addLine(message, 'user', fileData);
         
         const formData = new FormData();
         formData.append('message', message);
-        if (imageFile) {
-            formData.append('image', imageFile);
+        if (fileData) {
+            formData.append('image', fileData.file);
         }
 
         // 入力とプレビューをリセット
@@ -94,16 +99,16 @@ export class ChatManager {
     }
 
     // メッセージを画面に追加
-    async addLine(text, type, fileName = null) {
+    async addLine(text, type, fileData = null) {
         const line = document.createElement('div');
         line.className = 'line ' + type;
         
         if (type === 'user') {
-            let content = `<span class="user-prompt">USER&gt;</span>`;
-            if (fileName) {
-                content += ` [ファイル: ${fileName}]`;
+            let content = `<span class="user-prompt">USER&gt;</span> ${text}`;
+            if (fileData) {
+                content += `<br><img src="${fileData.dataUrl}" alt="Uploaded image">`;
+                content += `<div class="chat-image-filename">${fileData.file.name}</div>`;
             }
-            content += ` ${text}`;
             line.innerHTML = content;
             this.output.appendChild(line);
             this.scrollToBottom();

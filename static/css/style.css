@@ -163,15 +163,15 @@ body {
     display: flex;
     align-items: center;
     background: #0a2a0a;
-    padding: 5px 10px;
-    margin-bottom: 5px;
+    padding: 2px 8px;
     border-radius: 4px;
     font-size: 12px;
+    margin-right: 10px; /* promptとの間隔 */
+    max-width: 50%; /* 長すぎるファイル名に対応 */
 }
 
 #file-name-display {
     color: #0f0;
-    flex-grow: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -183,7 +183,8 @@ body {
     color: #f00;
     font-size: 16px;
     cursor: pointer;
-    padding: 0 5px;
+    padding: 0 0 0 5px;
+    margin-left: 5px;
 }
 
 /* アップロードボタン */
@@ -196,6 +197,21 @@ body {
 
 .upload-btn:hover {
     color: #0ff;
+}
+
+/* ユーザーメッセージ内の画像 */
+.line.user img {
+    max-width: 200px;
+    max-height: 150px;
+    border: 1px solid #0ff;
+    margin-top: 8px;
+    display: block;
+}
+
+.chat-image-filename {
+    font-size: 11px;
+    color: #0aa;
+    margin-top: 4px;
 }
 
 
