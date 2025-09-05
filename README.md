@@ -90,7 +90,7 @@ SERVER_HOST=0.0.0.0
 DEBUG_MODE=False
 ```
 
-#### When using Google Gemini.
+##### When using Google Gemini.
 
 ```bash
 # Only required items need to be changed (others use default values)
@@ -98,7 +98,7 @@ GEMINI_API_KEY=paste_your_api_key_here
 MODEL_NAME=gemini-2.0-flash  # or gemini-1.5-pro etc.
 ```
 
-#### When using Ollama.
+##### When using Ollama.
 
 ```bash
 # Only required items need to be changed (others use default values)
