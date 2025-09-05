@@ -17,7 +17,16 @@ export class ChatManager {
 
         this.uploadedFileData = null; // アップロードされたファイルとDataURLを保持
         
+        this.createDragOverlay();
         this.initEventListeners();
+    }
+
+    // ドラッグ＆ドロップ用オーバーレイを生成
+    createDragOverlay() {
+        this.dragOverlay = document.createElement('div');
+        this.dragOverlay.className = 'drag-overlay';
+        this.dragOverlay.textContent = 'ファイルをドロップしてアップロード';
+        document.body.appendChild(this.dragOverlay);
     }
 
     // イベントリスナー初期化
@@ -33,25 +42,59 @@ export class ChatManager {
         });
 
         // 画像ファイル選択
-        this.imageUpload.addEventListener('change', (e) => this.handleImageUpload(e));
+        this.imageUpload.addEventListener('change', (e) => this.processFiles(e.target.files));
 
         // 画像削除ボタンクリック
         this.removeImageBtn.addEventListener('click', () => this.removeImage());
+
+        // ドラッグ＆ドロップイベント
+        const dropZone = document.body;
+        let dragCounter = 0;
+
+        dropZone.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            dragCounter++;
+            this.dragOverlay.classList.add('visible');
+        });
+
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dragCounter--;
+            if (dragCounter === 0) {
+                this.dragOverlay.classList.remove('visible');
+            }
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault(); // dropイベントを発火させるために必須
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dragCounter = 0;
+            this.dragOverlay.classList.remove('visible');
+            this.processFiles(e.dataTransfer.files);
+        });
     }
 
-    // 画像が選択されたときの処理
-    handleImageUpload(event) {
-        const file = event.target.files[0];
-        if (file) {
-            this.fileNameDisplay.textContent = file.name;
-            this.fileDisplayContainer.style.display = 'flex';
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                this.uploadedFileData = { file: file, dataUrl: e.target.result };
-            };
-            reader.readAsDataURL(file);
+    // ファイル処理（ファイル選択とD&Dで共通化）
+    processFiles(files) {
+        if (files.length === 0) return;
+        // 最初のファイルのみを対象とする
+        const file = files[0];
+        if (!file.type.startsWith('image/')) {
+            // 画像ファイル以外は無視
+            return;
         }
+
+        this.fileNameDisplay.textContent = file.name;
+        this.fileDisplayContainer.style.display = 'flex';
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.uploadedFileData = { file: file, dataUrl: e.target.result };
+        };
+        reader.readAsDataURL(file);
     }
 
     // 選択された画像を削除

@@ -27,12 +27,13 @@ body {
 
 .chat-area {
     width: 100%;
-    max-width: 1160px;
-    height: 300px;
+    flex: 1; /* 可変領域にする */
     display: flex;
     flex-direction: column;
     border-top: 2px solid #0f0;
     padding-top: 15px;
+    min-height: 0; /* flexアイテムの縮小を許可 */
+    max-height: 700px; /* 上限を設定 */
 }
 
 .chat-container {
@@ -53,6 +54,7 @@ body {
     align-items: center;
     justify-content: center;
     padding: 15px;
+    flex-shrink: 0; /* 縮小させない */
 }
 
 #avatar-img {
@@ -156,6 +158,7 @@ body {
     width: 100%;
     display: flex;
     flex-direction: column;
+    flex-shrink: 0; /* 縮小させない */
 }
 
 /* ファイル表示 */
@@ -208,7 +211,54 @@ body {
     display: block;
 }
 
+/* ===========================================
+   レスポンシブ対応
+   =========================================== */
+@media (max-width: 768px) {
+    .terminal {
+        padding: 10px;
+    }
 
+    .chat-container {
+        flex-direction: column;
+    }
 
+    .avatar-area {
+        width: 100%;
+        height: 100px;
+        flex-direction: row;
+        justify-content: flex-start;
+        padding: 10px;
+    }
 
+    #avatar-img {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 0;
+        margin-right: 20px;
+    }
+}
 
+/* ドラッグ&ドロップのオーバーレイ */
+.drag-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 255, 0, 0.1);
+    border: 2px dashed #0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #0f0;
+    pointer-events: none; /* これがないとdropイベントが発火しない */
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.drag-overlay.visible {
+    opacity: 1;
+}
