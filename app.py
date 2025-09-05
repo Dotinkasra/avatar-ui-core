@@ -1,6 +1,7 @@
 """Webアプリケーション"""
-from flask import Flask, render_template, request, jsonify
 import google.generativeai as genai
+from flask import Flask, jsonify, render_template, request
+
 import settings
 
 # Gemini API接続
@@ -38,4 +39,4 @@ def api_chat():
     return jsonify({'response': response.text})
 
 if __name__ == '__main__':
-    app.run(debug=settings.DEBUG_MODE, port=settings.SERVER_PORT)
+    app.run(host=settings.SERVER_HOST, debug=settings.DEBUG_MODE, port=settings.SERVER_PORT)
