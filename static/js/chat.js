@@ -11,8 +11,8 @@ export class ChatManager {
         this.output = document.getElementById('output');
         this.input = document.getElementById('input');
         this.imageUpload = document.getElementById('image-upload');
-        this.imagePreviewContainer = document.getElementById('image-preview-container');
-        this.imagePreview = document.getElementById('image-preview');
+        this.fileDisplayContainer = document.getElementById('file-display-container');
+        this.fileNameDisplay = document.getElementById('file-name-display');
         this.removeImageBtn = document.getElementById('remove-image-btn');
 
         this.uploadedFile = null; // アップロードされたファイルを保持
@@ -44,12 +44,8 @@ export class ChatManager {
         const file = event.target.files[0];
         if (file) {
             this.uploadedFile = file;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                this.imagePreview.src = e.target.result;
-                this.imagePreviewContainer.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
+            this.fileNameDisplay.textContent = file.name;
+            this.fileDisplayContainer.style.display = 'flex';
         }
     }
 
@@ -57,14 +53,14 @@ export class ChatManager {
     removeImage() {
         this.uploadedFile = null;
         this.imageUpload.value = ''; // ファイル選択をリセット
-        this.imagePreview.src = '#';
-        this.imagePreviewContainer.style.display = 'none';
+        this.fileNameDisplay.textContent = '';
+        this.fileDisplayContainer.style.display = 'none';
     }
 
     // メッセージ送信
     async sendMessage(message, imageFile) {
         // ユーザーメッセージを画面に追加
-        this.addLine(message, 'user', imageFile ? this.imagePreview.src : null);
+        this.addLine(message, 'user', imageFile ? imageFile.name : null);
         
         const formData = new FormData();
         formData.append('message', message);
@@ -98,15 +94,16 @@ export class ChatManager {
     }
 
     // メッセージを画面に追加
-    async addLine(text, type, imageUrl = null) {
+    async addLine(text, type, fileName = null) {
         const line = document.createElement('div');
         line.className = 'line ' + type;
         
         if (type === 'user') {
-            let content = `<span class="user-prompt">USER&gt;</span> ${text}`;
-            if (imageUrl) {
-                content += `<br><img src="${imageUrl}" alt="Uploaded image">`;
+            let content = `<span class="user-prompt">USER&gt;</span>`;
+            if (fileName) {
+                content += ` [ファイル: ${fileName}]`;
             }
+            content += ` ${text}`;
             line.innerHTML = content;
             this.output.appendChild(line);
             this.scrollToBottom();
