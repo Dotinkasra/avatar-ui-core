@@ -6,35 +6,87 @@ export class ChatManager {
     constructor(settings, animationManager) {
         this.settings = settings;
         this.animationManager = animationManager;
+        
+        // DOM要素の取得
         this.output = document.getElementById('output');
         this.input = document.getElementById('input');
+        this.imageUpload = document.getElementById('image-upload');
+        this.imagePreviewContainer = document.getElementById('image-preview-container');
+        this.imagePreview = document.getElementById('image-preview');
+        this.removeImageBtn = document.getElementById('remove-image-btn');
+
+        this.uploadedFile = null; // アップロードされたファイルを保持
         
         this.initEventListeners();
     }
 
     // イベントリスナー初期化
     initEventListeners() {
+        // テキスト入力でEnterキー押下
         this.input.addEventListener('keypress', async (e) => {
-            if (e.key === 'Enter' && this.input.value.trim()) {
-                await this.sendMessage(this.input.value);
-                this.input.value = '';
+            if (e.key === 'Enter') {
+                const message = this.input.value.trim();
+                if (message || this.uploadedFile) {
+                    await this.sendMessage(message, this.uploadedFile);
+                }
             }
         });
+
+        // 画像ファイル選択
+        this.imageUpload.addEventListener('change', (e) => this.handleImageUpload(e));
+
+        // 画像削除ボタンクリック
+        this.removeImageBtn.addEventListener('click', () => this.removeImage());
+    }
+
+    // 画像が選択されたときの処理
+    handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            this.uploadedFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.imagePreview.src = e.target.result;
+                this.imagePreviewContainer.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // 選択された画像を削除
+    removeImage() {
+        this.uploadedFile = null;
+        this.imageUpload.value = ''; // ファイル選択をリセット
+        this.imagePreview.src = '#';
+        this.imagePreviewContainer.style.display = 'none';
     }
 
     // メッセージ送信
-    async sendMessage(message) {
-        // ユーザーメッセージを表示
-        this.addLine(message, 'user');
+    async sendMessage(message, imageFile) {
+        // ユーザーメッセージを画面に追加
+        this.addLine(message, 'user', imageFile ? this.imagePreview.src : null);
         
+        const formData = new FormData();
+        formData.append('message', message);
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+
+        // 入力とプレビューをリセット
+        this.input.value = '';
+        this.removeImage();
+
         try {
             // AIに送信
             const response = await fetch('/api/chat', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({message})
+                body: formData // JSONではなくFormDataを送信
             });
             
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
             
             // AIレスポンスをタイプライター効果で表示
@@ -46,12 +98,16 @@ export class ChatManager {
     }
 
     // メッセージを画面に追加
-    async addLine(text, type) {
+    async addLine(text, type, imageUrl = null) {
         const line = document.createElement('div');
         line.className = 'line ' + type;
         
         if (type === 'user') {
-            line.innerHTML = `<span class="user-prompt">USER&gt;</span> ${text}`;
+            let content = `<span class="user-prompt">USER&gt;</span> ${text}`;
+            if (imageUrl) {
+                content += `<br><img src="${imageUrl}" alt="Uploaded image">`;
+            }
+            line.innerHTML = content;
             this.output.appendChild(line);
             this.scrollToBottom();
         } else if (type === 'ai') {

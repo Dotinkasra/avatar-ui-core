@@ -1,4 +1,6 @@
 """Webアプリケーション"""
+import base64
+
 import google.generativeai as genai
 import ollama
 from flask import Flask, jsonify, render_template, request, session
@@ -43,19 +45,34 @@ def index():
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
     """ユーザー入力を受信しAI応答を返す"""
-    user_message = request.json['message']
-    
+    user_message = request.form.get('message', '')
+    image_file = request.files.get('image')
+
+    ai_response = ""
+
     if settings.AI_PROVIDER == "gemini":
-        response = ai_client.send_message(user_message)
-        ai_response = response.text
+        # Geminiは現在この実装では画像入力に未対応
+        if image_file:
+            # 本来はここで画像処理を行う
+            # response = ai_client.send_message([user_message, image_file])
+            ai_response = "(画像を受け取りましたが、現在Geminiでの画像解析はサポートされていません)"
+        else:
+            response = ai_client.send_message(user_message)
+            ai_response = response.text
     
     elif settings.AI_PROVIDER == "ollama":
-        # セッションから会話履歴を取得（なければ初期化）
         messages = session.get('messages', [])
         if not messages:
             messages.append({'role': 'system', 'content': settings.SYSTEM_INSTRUCTION})
+
+        # ユーザーメッセージを作成
+        user_prompt = {'role': 'user', 'content': user_message, 'images': []}
+        if image_file:
+            # 画像をBase64にエンコードしてメッセージに追加
+            encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+            user_prompt['images'].append(encoded_image)
         
-        messages.append({'role': 'user', 'content': user_message})
+        messages.append(user_prompt)
         
         # Ollama API呼び出し
         response = ai_client.chat(
