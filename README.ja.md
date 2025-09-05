@@ -75,14 +75,35 @@ cp .env.example .env
 # Windows: copy .env.example .env
 ```
 
-#### 2. APIキーの設定
+#### 2. 環境変数の設定
+テキストエディタで`.env`ファイルを開き、必須項目を設定
 
-テキストエディタで`.env`ファイルを開き、必須項目を設定：
+##### 共通
+**外部にサーバーを公開したい場合は以下のように項目を変更してください。**
 
 ```bash
-# 必須項目のみ変更が必要（他の項目はデフォルト値で動作）
+# サーバーアドレス
+SERVER_HOST=0.0.0.0
+# デバッグモード（開発時: True, 本番: False）
+DEBUG_MODE=False
+```
+
+##### Google Geminiを使用する場合
+
+```bash
+# 以下の項目を設定してください。（他の項目はデフォルト値で動作）
+AI_PROVIDER=gemini
 GEMINI_API_KEY=ここに取得したAPIキーを貼り付け
 MODEL_NAME=gemini-2.0-flash  # または gemini-2.5-pro など
+```
+
+##### Ollamaを使用する場合
+
+```bash
+# 以下の項目を設定してください。（他の項目はデフォルト値で動作）
+AI_PROVIDER=ollama
+OLLAMA_HOST=ollamaをホストしているマシンのIPアドレス
+MODEL_NAME=gemma3:12b # その他インストール済みのモデル名
 ```
 
 **重要**: `.env`ファイルには機密情報が含まれるため、絶対にGitにコミットしないでください。

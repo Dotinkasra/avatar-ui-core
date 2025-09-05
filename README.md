@@ -76,14 +76,35 @@ cp .env.example .env
 # Windows: copy .env.example .env
 ```
 
-#### 2. Set API Key
+#### 2. Setting Enviroment Variables
 
-Open `.env` file in a text editor and configure required settings:
+Open `.env` file in a text editor and configure required settings
+
+##### Common Configuration
+**To make the server accessible externally, adjust the following settings**
+
+```bash
+# Host address
+SERVER_HOST=0.0.0.0
+# Debug mode
+DEBUG_MODE=False
+```
+
+#### When using Google Gemini.
 
 ```bash
 # Only required items need to be changed (others use default values)
 GEMINI_API_KEY=paste_your_api_key_here
 MODEL_NAME=gemini-2.0-flash  # or gemini-1.5-pro etc.
+```
+
+#### When using Ollama.
+
+```bash
+# Only required items need to be changed (others use default values)
+AI_PROVIDER=ollama
+OLLAMA_HOST=the_IP_address_of_the_Ollama_server_machine
+MODEL_NAME=gemma3:12b # other models installed in Ollama
 ```
 
 Other settings (avatar name, UI speed, sound effects) have default values and work out of the box. You can customize them later as needed.
