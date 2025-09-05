@@ -147,20 +147,41 @@ export class ChatManager {
         line.className = 'line ' + type;
         
         if (type === 'user') {
-            let content = `<span class="user-prompt">USER&gt;</span> ${text}`;
+            // テキスト部分を先に設定
+            const textContent = document.createElement('span');
+            textContent.innerHTML = `<span class="user-prompt">USER&gt;</span> ${text}`;
+            line.appendChild(textContent);
+
+            // 画像があれば追加し、ロード後にスクロール
             if (imageUrl) {
-                content += `<br><img src="${imageUrl}" alt="Uploaded image">`;
+                const br = document.createElement('br');
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = 'Uploaded image';
+                img.onload = () => {
+                    this.scrollToBottom();
+                };
+                img.onerror = () => {
+                    // 画像読み込み失敗時も念のためスクロール
+                    this.scrollToBottom();
+                };
+                line.appendChild(br);
+                line.appendChild(img);
             }
-            line.innerHTML = content;
+
             this.output.appendChild(line);
-            this.scrollToBottom();
+            this.scrollToBottom(); // まずテキスト追加時点で一度スクロール
+
         } else if (type === 'ai') {
             // AIメッセージはタイプライター演出
             line.innerHTML = `<span class="ai-prompt">${this.settings.avatarName}&gt;</span> <span class="ai-text"></span>`;
             this.output.appendChild(line);
+            this.scrollToBottom(); // タイプライター開始前にスクロール
             
             const aiTextElement = line.querySelector('.ai-text');
             await this.animationManager.typeWriter(aiTextElement, text);
+            this.scrollToBottom(); // タイプライター完了後にもスクロール
+
         } else {
             // system メッセージなど
             line.textContent = text;
