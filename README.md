@@ -11,6 +11,7 @@ A classic terminal-style UI core. Provides an extensible project foundation from
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)
 ![Flask](https://img.shields.io/badge/flask-3.0.0-green.svg)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 ![Avatar UI Core Terminal Interface](docs/assets/avatar-ui_demo.gif)
 
