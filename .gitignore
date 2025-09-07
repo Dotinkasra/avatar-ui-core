@@ -9,6 +9,7 @@ env/
 # IDE
 .vscode/
 .idea/
+.cz-config.js
 
 # OS
 .DS_Store
