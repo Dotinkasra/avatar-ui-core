@@ -21,6 +21,7 @@ COPY app.py .
 COPY settings.py .
 COPY static/ ./static/
 COPY templates/ ./templates/
+COPY prompt_settings/ ./prompt_settings/
 
 # アプリケーションがリッスンするポートをコンテナに公開
 EXPOSE 5020

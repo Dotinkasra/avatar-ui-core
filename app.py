@@ -4,12 +4,12 @@ import base64
 import json
 import os
 import subprocess
-import time # timeモジュールを追加
+import time
 import uuid
 
 import google.generativeai as genai
 import ollama
-from flask import Flask, jsonify, render_template, request, session
+from flask import Flask, jsonify, render_template, request, session # requestをインポート
 
 import settings
 
@@ -63,8 +63,9 @@ def get_personas():
         return []
     return sorted([f.replace('.json', '') for f in os.listdir(PROMPT_SETTINGS_DIR) if f.endswith('.json')])
 
-def clean_old_audio_files():
-    """指定された期間より古い音声ファイルを削除する"""
+@app.before_request
+def clean_old_audio_files_before_request():
+    """各リクエストの前に古い音声ファイルを削除する"""
     now = time.time()
     for filename in os.listdir(AUDIO_DIR):
         filepath = os.path.join(AUDIO_DIR, filename)
@@ -74,7 +75,7 @@ def clean_old_audio_files():
                     os.remove(filepath)
                     print(f"Deleted old audio file: {filepath}")
             except OSError as e:
-                print(f"Error deleting old audio file {filepath}: {e}")
+                print(f"Error deleting old audio file {filepath}: {e.strerror} (Code: {e.errno})")
 
 # --- ルート ---
 @app.route("/")
@@ -133,7 +134,7 @@ def api_chat():
         try:
             os.remove(last_audio_path)
         except OSError as e:
-            print(f"Error removing file {last_audio_path}: {e}")
+            print(f"Error removing file {last_audio_path}: {e.strerror} (Code: {e.errno})")
 
     user_message = request.form.get("message", "")
     image_file = request.files.get("image")
@@ -177,7 +178,7 @@ def api_chat():
                 command.extend([f"--{key}", str(value)])
             command.append(ai_response)
             subprocess.run(command, check=True, capture_output=True, text=True)
-            print(f"Generated audio file: {save_path}") # 成功ログを追加
+            print(f"Generated audio file: {save_path}")
             audio_url = f"/{save_path}"
             session['last_audio_path'] = save_path
         except (subprocess.CalledProcessError, FileNotFoundError) as e:
@@ -186,5 +187,4 @@ def api_chat():
     return jsonify({"response": ai_response, "audio_url": audio_url})
 
 if __name__ == "__main__":
-    clean_old_audio_files() # アプリケーション起動時に古いファイルをクリーンアップ
     app.run(host=settings.SERVER_HOST, debug=settings.DEBUG_MODE, port=settings.SERVER_PORT)
