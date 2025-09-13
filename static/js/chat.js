@@ -15,14 +15,14 @@ export class ChatManager {
         this.fileNameDisplay = document.getElementById('file-name-display');
         this.removeImageBtn = document.getElementById('remove-image-btn');
         this.avatarImg = document.getElementById('avatar-img');
+        this.avatarLabel = document.querySelector('.avatar-label');
         
         // 設定モーダル関連のDOM
         this.settingsModal = document.getElementById('settings-modal');
         this.closeModalBtn = document.getElementById('close-modal-btn');
+        this.personaSelect = document.getElementById('persona-select');
         this.typewriterToggle = document.getElementById('typewriter-toggle');
         this.voiceToggle = document.getElementById('voice-toggle');
-
-        // vsay設定のDOM
         this.vsaySliders = {
             speed: document.getElementById('vsay-speed'),
             pitch: document.getElementById('vsay-pitch'),
@@ -35,16 +35,25 @@ export class ChatManager {
             intonation: document.getElementById('vsay-intonation-value'),
             tempo: document.getElementById('vsay-tempo-value'),
         };
+        this.vsayTextFields = {
+            host: document.getElementById('vsay-host'),
+            port: document.getElementById('vsay-port'),
+            id: document.getElementById('vsay-id'),
+            number: document.getElementById('vsay-number'),
+            style: document.getElementById('vsay-style'),
+        };
 
         // 状態管理
         this.uploadedFileData = null;
+        this.currentPersonaName = null;
         this.isTypewriterEnabled = true;
         this.isVoiceEnabled = true;
-        this.vsayOptions = { speed: 1.1, pitch: 0.0, intonation: 1.0, tempo: 1.0 };
+        this.lastPersonaName = null; // lastPersonaNameプロパティを追加
         
         this.createDragOverlay();
         this.initEventListeners();
         this.loadSettings();
+        this.sendInitialPersonaToServer(); // 初期ペルソナをサーバーに通知
     }
 
     createDragOverlay() {
@@ -55,7 +64,6 @@ export class ChatManager {
     }
 
     initEventListeners() {
-        // --- メイン機能 ---
         this.input.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter' && (this.input.value.trim() || this.uploadedFileData)) {
                 await this.sendMessage(this.input.value.trim(), this.uploadedFileData);
@@ -64,14 +72,13 @@ export class ChatManager {
         this.imageUpload.addEventListener('change', (e) => this.processFiles(e.target.files));
         this.removeImageBtn.addEventListener('click', () => this.removeImage());
 
-        // --- 設定モーダル ---
         this.avatarImg.addEventListener('click', () => this.openModal());
         this.closeModalBtn.addEventListener('click', () => this.closeModal());
         this.settingsModal.addEventListener('click', (e) => {
             if (e.target === this.settingsModal) this.closeModal();
         });
 
-        // --- 設定項目 ---
+        this.personaSelect.addEventListener('change', (e) => this.handlePersonaChange(e));
         this.typewriterToggle.addEventListener('change', (e) => {
             this.isTypewriterEnabled = e.target.checked;
             localStorage.setItem('typewriterEnabled', this.isTypewriterEnabled);
@@ -81,31 +88,40 @@ export class ChatManager {
             localStorage.setItem('voiceEnabled', this.isVoiceEnabled);
         });
 
-        // vsayスライダーのイベントリスナー
         for (const key in this.vsaySliders) {
             this.vsaySliders[key].addEventListener('input', (e) => {
                 const value = parseFloat(e.target.value).toFixed(2);
                 this.vsaySliderValues[key].textContent = value;
-                this.vsayOptions[key] = parseFloat(value);
             });
-            this.vsaySliders[key].addEventListener('change', () => {
-                this.saveVsaySettings();
+            this.vsaySliders[key].addEventListener('change', (e) => {
+                const key = e.target.id.split('-')[1];
+                const value = parseFloat(e.target.value);
+                this.saveCurrentPersonaVsaySettings({ [key]: value });
             });
         }
 
-        // --- D&D ---
-        // ... (省略)
+        for (const key in this.vsayTextFields) {
+            this.vsayTextFields[key].addEventListener('input', (e) => {
+                const value = e.target.value;
+                this.saveCurrentPersonaVsaySettings({ [key]: value });
+            });
+        }
+        
+        const dropZone = document.body;
+        let dragCounter = 0;
+        dropZone.addEventListener('dragenter', (e) => { e.preventDefault(); dragCounter++; this.dragOverlay.classList.add('visible'); });
+        dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dragCounter--; if (dragCounter === 0) this.dragOverlay.classList.remove('visible'); });
+        dropZone.addEventListener('dragover', (e) => e.preventDefault());
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dragCounter = 0; this.dragOverlay.classList.remove('visible'); this.processFiles(e.dataTransfer.files); });
     }
 
-    // --- 設定関連メソッド ---
     async openModal() {
-        await this.loadVsaySettings();
+        await this.populatePersonas();
         this.settingsModal.style.display = 'flex';
     }
     closeModal() { this.settingsModal.style.display = 'none'; }
 
     loadSettings() {
-        // ... (省略)
         const typewriterSetting = localStorage.getItem('typewriterEnabled');
         if (typewriterSetting !== null) this.isTypewriterEnabled = typewriterSetting === 'true';
         this.typewriterToggle.checked = this.isTypewriterEnabled;
@@ -113,38 +129,117 @@ export class ChatManager {
         const voiceSetting = localStorage.getItem('voiceEnabled');
         if (voiceSetting !== null) this.isVoiceEnabled = voiceSetting === 'true';
         this.voiceToggle.checked = this.isVoiceEnabled;
+
+        this.lastPersonaName = localStorage.getItem('lastPersona'); // lastPersonaNameをlocalStorageから読み込む
     }
 
-    async loadVsaySettings() {
-        try {
-            const response = await fetch('/api/settings');
-            const settings = await response.json();
-            this.vsayOptions = settings;
-            for (const key in settings) {
-                if (this.vsaySliders[key]) {
-                    this.vsaySliders[key].value = settings[key];
-                    this.vsaySliderValues[key].textContent = parseFloat(settings[key]).toFixed(2);
+    async sendInitialPersonaToServer() {
+        if (this.lastPersonaName) {
+            try {
+                const response = await fetch('/api/current_persona', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: this.lastPersonaName })
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    this.updateUIAfterPersonaChange(data.persona);
+                    this.currentPersonaName = this.lastPersonaName;
+                } else {
+                    console.error("Failed to set initial persona on server:", data.message);
                 }
+            } catch (error) {
+                console.error("Error sending initial persona to server:", error);
             }
-        } catch (error) {
-            console.error("Failed to load vsay settings:", error);
         }
     }
 
-    async saveVsaySettings() {
+    async populatePersonas() {
         try {
-            await fetch('/api/settings', {
+            const [personasRes, currentPersonaRes] = await Promise.all([fetch('/api/personas'), fetch('/api/current_persona')]);
+            const personas = await personasRes.json();
+            const currentPersonaData = await currentPersonaRes.json();
+            
+            this.currentPersonaName = currentPersonaData.name;
+
+            this.personaSelect.innerHTML = '';
+            personas.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                if (name === this.currentPersonaName) option.selected = true;
+                this.personaSelect.appendChild(option);
+            });
+            
+            const vsayOptions = currentPersonaData.data.vsayOptions || {};
+            for (const key in vsayOptions) {
+                if (this.vsaySliders[key]) {
+                    this.vsaySliders[key].value = vsayOptions[key];
+                    this.vsaySliderValues[key].textContent = parseFloat(vsayOptions[key]).toFixed(2);
+                } else if (this.vsayTextFields[key]) {
+                    this.vsayTextFields[key].value = vsayOptions[key];
+                }
+            }
+        } catch (error) {
+            console.error("Failed to load persona data:", error);
+        }
+    }
+
+    async handlePersonaChange(event) {
+        const selectedPersona = event.target.value;
+        localStorage.setItem('lastPersona', selectedPersona); // localStorageに保存
+        try {
+            const response = await fetch('/api/current_persona', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: selectedPersona }) });
+            const data = await response.json();
+            if (data.status === 'success') {
+                this.updateUIAfterPersonaChange(data.persona);
+                this.currentPersonaName = selectedPersona;
+                const vsayOptions = data.persona.vsayOptions || {};
+                for (const key in vsayOptions) {
+                    if (this.vsaySliders[key]) {
+                        this.vsaySliders[key].value = vsayOptions[key];
+                        this.vsaySliderValues[key].textContent = parseFloat(vsayOptions[key]).toFixed(2);
+                    } else if (this.vsayTextFields[key]) {
+                        this.vsayTextFields[key].value = vsayOptions[key];
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Failed to set persona:", error);
+        }
+    }
+
+    updateUIAfterPersonaChange(persona) {
+        document.title = persona.avatarFullName;
+        this.avatarImg.src = `/static/images/${persona.avatarImageIdle}`;
+        this.avatarImg.alt = persona.avatarName.toUpperCase();
+        this.avatarLabel.textContent = persona.avatarName.toUpperCase();
+        const systemLine = this.output.querySelector('.line.system');
+        if(systemLine) systemLine.textContent = `> SYSTEM: ${persona.avatarFullName} Online`;
+    }
+
+    async saveCurrentPersonaVsaySettings(newVsayOption) {
+        const personaName = this.currentPersonaName;
+        if (!personaName) return;
+
+        try {
+            const response = await fetch(`/api/current_persona`);
+            const currentPersona = await response.json();
+            const updatedOptions = { ...currentPersona.data.vsayOptions, ...newVsayOption };
+
+            await fetch('/api/persona_settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.vsayOptions)
+                body: JSON.stringify({ 
+                    name: personaName, 
+                    settings: { vsayOptions: updatedOptions } 
+                })
             });
         } catch (error) {
             console.error("Failed to save vsay settings:", error);
         }
     }
 
-    // --- ファイル処理 & メッセージ送受信 (省略) ---
-    // ... (変更なし)
     processFiles(files) {
         if (files.length === 0) return;
         const file = files[0];
@@ -152,9 +247,7 @@ export class ChatManager {
         this.fileNameDisplay.textContent = file.name;
         this.fileDisplayContainer.style.display = 'flex';
         const reader = new FileReader();
-        reader.onload = (e) => {
-            this.uploadedFileData = { file: file, dataUrl: e.target.result };
-        };
+        reader.onload = (e) => { this.uploadedFileData = { file: file, dataUrl: e.target.result }; };
         reader.readAsDataURL(file);
     }
 

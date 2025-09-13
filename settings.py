@@ -36,19 +36,7 @@ else:
 # ===========================================
 
 # モデル設定
-MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.0-flash" if AI_PROVIDER == "gemini" else "llama3:latest")
-
-# アバター設定
-AVATAR_NAME = os.getenv("AVATAR_NAME", "Spectra")
-AVATAR_FULL_NAME = os.getenv("AVATAR_FULL_NAME", "Spectra Communicator")
-AVATAR_IMAGE_IDLE = os.getenv("AVATAR_IMAGE_IDLE", "idle.png")
-AVATAR_IMAGE_TALK = os.getenv("AVATAR_IMAGE_TALK", "talk.png")
-
-# AI性格設定（AVATAR_NAMEに依存）
-SYSTEM_INSTRUCTION = os.getenv(
-    "SYSTEM_INSTRUCTION",
-    f"あなたは{AVATAR_NAME}というAIアシスタントです。技術的で直接的なスタイルで簡潔に応答してください。回答は短く要点を押さえたものにしてください。",
-)
+MODEL_NAME = os.getenv("MODEL_NAME", "gemini-1.5-flash-latest" if AI_PROVIDER == "gemini" else "llama3:latest")
 
 # サーバー設定
 SERVER_HOST = os.getenv("SERVER_HOST", "127.0.0.1")

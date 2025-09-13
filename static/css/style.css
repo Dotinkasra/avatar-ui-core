@@ -229,6 +229,20 @@ body {
     margin-bottom: 15px;
 }
 
+#persona-select {
+    background-color: #000;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 5px;
+    font-family: inherit;
+    font-size: 14px;
+    width: 180px; /* 幅を調整 */
+}
+
+#persona-select:focus {
+    outline: 1px solid #0ff;
+}
+
 .divider {
     border: none;
     height: 1px;
@@ -275,6 +289,26 @@ body {
     min-width: 40px; /* 値表示エリアの幅を確保 */
     text-align: right;
     font-variant-numeric: tabular-nums;
+}
+
+.text-input-item label {
+    flex-basis: 80px; /* ラベルの幅を固定 */
+    flex-shrink: 0;
+}
+
+.vsay-text-input {
+    flex-grow: 1;
+    background-color: #000;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 5px;
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+}
+
+.vsay-text-input:focus {
+    outline: 1px solid #0ff;
 }
 
 /* --- トグルスイッチ --- */
