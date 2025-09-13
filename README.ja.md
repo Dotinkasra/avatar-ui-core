@@ -140,6 +140,15 @@ python app.py
 
 ブラウザで `http://localhost:5000` にアクセスしてください。
 
+## Dockerを用いる場合
+```bash
+docker build --tag avatar-ui-core --file Dockerfile .
+docker run --name avatar-ui-core-container -p 0.0.0.0:5000:5000 -v ./prompt_settings:/app/prompt_settings -v ./static/audio:/app/static/audio --env-file .env -e SERVER_HOST=0.0.0.0 --rm -d --add-host host.docker.internal:host-gateway avatar-ui-core
+```
+
+AivisSpeach、またはVOICEVOX engineがホストPCで起動している場合、`prompt_settings/your-ai-persona-name.json`のvsayOptions['host']には"http://host.docker.internal"を入力します。
+
+
 ## プロジェクト構造
 
 ```

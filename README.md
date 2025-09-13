@@ -141,6 +141,18 @@ On successful launch, you'll see:
 
 Access the application at `http://localhost:5000` in your browser.
 
+
+## Using Docker
+```bash
+docker build --tag avatar-ui-core --file Dockerfile .
+docker run --name avatar-ui-core-container -p 0.0.0.0:5000:5000 -v ./prompt_settings:/app/prompt_settings -v ./static/audio:/app/static/audio --env-file .env -e SERVER_HOST=0.0.0.0 --rm -d --add-host host.docker.internal:host-gateway avatar-ui-core
+```
+
+If AivisSpeach or VOICEVOX engine is running on the host machine, set
+vsayOptions['host'] in prompt_settings/your-ai-persona-name.json to:  
+`http://host.docker.internal`
+
+
 ## Project Structure
 
 ```
