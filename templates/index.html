@@ -63,7 +63,29 @@
                         <label for="voice-toggle"></label>
                     </div>
                 </div>
-                <!-- 将来の他の設定項目はここに追加 -->
+
+                <hr class="divider">
+
+                <div class="setting-item slider-item">
+                    <label for="vsay-speed">Speed</label>
+                    <input type="range" id="vsay-speed" class="vsay-slider" min="0.5" max="2.0" step="0.1">
+                    <span class="slider-value" id="vsay-speed-value">1.1</span>
+                </div>
+                <div class="setting-item slider-item">
+                    <label for="vsay-pitch">Pitch</label>
+                    <input type="range" id="vsay-pitch" class="vsay-slider" min="-0.15" max="0.15" step="0.01">
+                    <span class="slider-value" id="vsay-pitch-value">0.0</span>
+                </div>
+                <div class="setting-item slider-item">
+                    <label for="vsay-intonation">Intonation</label>
+                    <input type="range" id="vsay-intonation" class="vsay-slider" min="0.0" max="2.0" step="0.1">
+                    <span class="slider-value" id="vsay-intonation-value">1.0</span>
+                </div>
+                <div class="setting-item slider-item">
+                    <label for="vsay-tempo">Tempo</label>
+                    <input type="range" id="vsay-tempo" class="vsay-slider" min="0.0" max="2.0" step="0.1">
+                    <span class="slider-value" id="vsay-tempo-value">1.0</span>
+                </div>
             </div>
         </div>
     </div>
