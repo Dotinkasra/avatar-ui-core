@@ -1,0 +1,24 @@
+# Gitリポジトリ関連
+.git
+.gitignore
+
+# IDE設定
+.vscode/
+
+# Python仮想環境
+venv/
+
+# Pythonキャッシュ
+__pycache__/
+*.pyc
+*.pyo
+
+# 環境変数ファイル (シークレットを含むためイメージに含めない)
+.env
+
+# ドキュメント
+/docs
+
+# Docker関連ファイル自体
+Dockerfile
+.dockerignore
