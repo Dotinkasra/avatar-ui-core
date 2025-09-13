@@ -14,11 +14,21 @@ export class ChatManager {
         this.fileDisplayContainer = document.getElementById('file-display-container');
         this.fileNameDisplay = document.getElementById('file-name-display');
         this.removeImageBtn = document.getElementById('remove-image-btn');
+        this.avatarImg = document.getElementById('avatar-img');
+        
+        // 設定モーダル関連のDOM
+        this.settingsModal = document.getElementById('settings-modal');
+        this.closeModalBtn = document.getElementById('close-modal-btn');
+        this.typewriterToggle = document.getElementById('typewriter-toggle');
+        this.voiceToggle = document.getElementById('voice-toggle');
 
         this.uploadedFileData = null; // アップロードされたファイルとDataURLを保持
+        this.isTypewriterEnabled = true;
+        this.isVoiceEnabled = true;
         
         this.createDragOverlay();
         this.initEventListeners();
+        this.loadSettings();
     }
 
     // ドラッグ＆ドロップ用オーバーレイを生成
@@ -31,7 +41,7 @@ export class ChatManager {
 
     // イベントリスナー初期化
     initEventListeners() {
-        // テキスト入力でEnterキー押下
+        // --- メイン機能のイベントリスナー ---
         this.input.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
                 const message = this.input.value.trim();
@@ -40,35 +50,38 @@ export class ChatManager {
                 }
             }
         });
-
-        // 画像ファイル選択
         this.imageUpload.addEventListener('change', (e) => this.processFiles(e.target.files));
-
-        // 画像削除ボタンクリック
         this.removeImageBtn.addEventListener('click', () => this.removeImage());
 
-        // ドラッグ＆ドロップイベント
+        // --- 設定モーダルのイベントリスナー ---
+        this.avatarImg.addEventListener('click', () => this.openModal());
+        this.closeModalBtn.addEventListener('click', () => this.closeModal());
+        this.settingsModal.addEventListener('click', (e) => {
+            if (e.target === this.settingsModal) this.closeModal();
+        });
+        this.typewriterToggle.addEventListener('change', (e) => {
+            this.isTypewriterEnabled = e.target.checked;
+            localStorage.setItem('typewriterEnabled', this.isTypewriterEnabled);
+        });
+        this.voiceToggle.addEventListener('change', (e) => {
+            this.isVoiceEnabled = e.target.checked;
+            localStorage.setItem('voiceEnabled', this.isVoiceEnabled);
+        });
+
+        // --- ドラッグ＆ドロップのイベントリスナー ---
         const dropZone = document.body;
         let dragCounter = 0;
-
         dropZone.addEventListener('dragenter', (e) => {
             e.preventDefault();
             dragCounter++;
             this.dragOverlay.classList.add('visible');
         });
-
         dropZone.addEventListener('dragleave', (e) => {
             e.preventDefault();
             dragCounter--;
-            if (dragCounter === 0) {
-                this.dragOverlay.classList.remove('visible');
-            }
+            if (dragCounter === 0) this.dragOverlay.classList.remove('visible');
         });
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault(); // dropイベントを発火させるために必須
-        });
-
+        dropZone.addEventListener('dragover', (e) => e.preventDefault());
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dragCounter = 0;
@@ -77,19 +90,31 @@ export class ChatManager {
         });
     }
 
-    // ファイル処理（ファイル選択とD&Dで共通化）
+    // --- 設定関連のメソッド ---
+    openModal() { this.settingsModal.style.display = 'flex'; }
+    closeModal() { this.settingsModal.style.display = 'none'; }
+
+    loadSettings() {
+        const typewriterSetting = localStorage.getItem('typewriterEnabled');
+        if (typewriterSetting !== null) {
+            this.isTypewriterEnabled = typewriterSetting === 'true';
+        }
+        this.typewriterToggle.checked = this.isTypewriterEnabled;
+
+        const voiceSetting = localStorage.getItem('voiceEnabled');
+        if (voiceSetting !== null) {
+            this.isVoiceEnabled = voiceSetting === 'true';
+        }
+        this.voiceToggle.checked = this.isVoiceEnabled;
+    }
+
+    // --- ファイル処理メソッド ---
     processFiles(files) {
         if (files.length === 0) return;
-        // 最初のファイルのみを対象とする
         const file = files[0];
-        if (!file.type.startsWith('image/')) {
-            // 画像ファイル以外は無視
-            return;
-        }
-
+        if (!file.type.startsWith('image/')) return;
         this.fileNameDisplay.textContent = file.name;
         this.fileDisplayContainer.style.display = 'flex';
-
         const reader = new FileReader();
         reader.onload = (e) => {
             this.uploadedFileData = { file: file, dataUrl: e.target.result };
@@ -97,100 +122,74 @@ export class ChatManager {
         reader.readAsDataURL(file);
     }
 
-    // 選択された画像を削除
     removeImage() {
         this.uploadedFileData = null;
-        this.imageUpload.value = ''; // ファイル選択をリセット
+        this.imageUpload.value = '';
         this.fileNameDisplay.textContent = '';
         this.fileDisplayContainer.style.display = 'none';
     }
 
-    // メッセージ送信
+    // --- メッセージ送受信と表示 ---
     async sendMessage(message, fileData) {
-        // ユーザーメッセージを画面に追加
-        this.addLine(message, 'user', fileData ? fileData.dataUrl : null);
-        
+        this.addLine(message, 'user', { imageUrl: fileData ? fileData.dataUrl : null });
         const formData = new FormData();
         formData.append('message', message);
-        if (fileData) {
-            formData.append('image', fileData.file);
-        }
-
-        // 入力とプレビューをリセット
+        if (fileData) formData.append('image', fileData.file);
         this.input.value = '';
         this.removeImage();
-
         try {
-            // AIに送信
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                body: formData // JSONではなくFormDataを送信
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
+            const response = await fetch('/api/chat', { method: 'POST', body: formData });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
-            
-            // AIレスポンスをタイプライター効果で表示
-            await this.addLine(data.response, 'ai');
+            await this.addLine(data.response, 'ai', { audioUrl: data.audio_url });
         } catch (error) {
             console.error('Chat error:', error);
             this.addLine('エラーが発生しました。再試行してください。', 'system');
         }
     }
 
-    // メッセージを画面に追加
-    async addLine(text, type, imageUrl = null) {
+    async addLine(text, type, options = {}) {
+        const { imageUrl, audioUrl } = options;
         const line = document.createElement('div');
         line.className = 'line ' + type;
-        
         if (type === 'user') {
-            // テキスト部分を先に設定
             const textContent = document.createElement('span');
             textContent.innerHTML = `<span class="user-prompt">USER&gt;</span> ${text}`;
             line.appendChild(textContent);
-
-            // 画像があれば追加し、ロード後にスクロール
             if (imageUrl) {
                 const br = document.createElement('br');
                 const img = document.createElement('img');
                 img.src = imageUrl;
                 img.alt = 'Uploaded image';
-                img.onload = () => {
-                    this.scrollToBottom();
-                };
-                img.onerror = () => {
-                    // 画像読み込み失敗時も念のためスクロール
-                    this.scrollToBottom();
-                };
+                img.onload = () => this.scrollToBottom();
+                img.onerror = () => this.scrollToBottom();
                 line.appendChild(br);
                 line.appendChild(img);
             }
-
             this.output.appendChild(line);
-            this.scrollToBottom(); // まずテキスト追加時点で一度スクロール
-
+            this.scrollToBottom();
         } else if (type === 'ai') {
-            // AIメッセージはタイプライター演出
             line.innerHTML = `<span class="ai-prompt">${this.settings.avatarName}&gt;</span> <span class="ai-text"></span>`;
             this.output.appendChild(line);
-            this.scrollToBottom(); // タイプライター開始前にスクロール
-            
+            this.scrollToBottom();
+            if (audioUrl && this.isVoiceEnabled) {
+                const audio = new Audio(audioUrl);
+                audio.play().catch(e => console.error("Audio play failed:", e));
+            }
             const aiTextElement = line.querySelector('.ai-text');
-            await this.animationManager.typeWriter(aiTextElement, text);
-            this.scrollToBottom(); // タイプライター完了後にもスクロール
-
+            if (this.isTypewriterEnabled) {
+                await this.animationManager.typeWriter(aiTextElement, text);
+            } else {
+                aiTextElement.textContent = text;
+            }
+            this.scrollToBottom();
         } else {
-            // system メッセージなど
             line.textContent = text;
             this.output.appendChild(line);
             this.scrollToBottom();
         }
     }
 
-    // チャットエリアを最下部にスクロール
     scrollToBottom() {
         this.output.scrollTop = this.output.scrollHeight;
     }

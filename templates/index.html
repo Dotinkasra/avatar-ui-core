@@ -11,6 +11,7 @@
     <!-- ターミナル風UI -->
     <div class="terminal">
         <div class="chat-area">
+            
             <div class="chat-container">
                 <!-- チャット出力エリア -->
                 <div class="output" id="output">
@@ -36,6 +37,33 @@
                     <span class="prompt">&gt;</span>
                     <input type="text" id="input" autofocus>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 設定モーダル -->
+    <div id="settings-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button id="close-modal-btn" class="icon-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-item">
+                    <label for="typewriter-toggle">Typewriter Effect</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="typewriter-toggle" checked>
+                        <label for="typewriter-toggle"></label>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label for="voice-toggle">Voice Playback</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="voice-toggle" checked>
+                        <label for="voice-toggle"></label>
+                    </div>
+                </div>
+                <!-- 将来の他の設定項目はここに追加 -->
             </div>
         </div>
     </div>
