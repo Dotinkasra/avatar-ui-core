@@ -12,16 +12,21 @@
 ## 特徴
 
 - **ターミナルUI** - グリーンオンブラックの古典的ターミナルインターフェース
-- **AIアバター** - 発話同期型のピクセルアートアバター表示
-- **タイプライター効果** - 文字単位のリアルタイム表示アニメーション
+- **AIアバター** - 発話同期型のピクセルアートアバター表示（ペルソナごとに設定可能）
+- **タイプライター効果** - 文字単位のリアルタイム表示アニメーション（ON/OFF切り替え可能）
 - **サウンドエフェクト** - Web Audio APIによるタイピング音生成
-- **完全な設定管理** - すべての動作パラメータを`.env`ファイルで一元管理
+- **音声合成** - AIの応答を音声で再生（ON/OFF切り替え可能、vsayオプション調整可能）
+- **画像アップロード** - チャットに画像を添付してAIに送信可能（ドラッグ＆ドロップ対応）
+- **AIペルソナ管理** - 複数のAIペルソナを切り替え可能（アバター、プロンプト、音声設定をペルソナごとに保存）
+- **設定の永続化** - 最後に使用したペルソナやUI設定をブラウザに保存
+- **画像入力対応**（Ollamaのみ） - マルチモーダル対応のモデルの場合は画像を読み込むことが可能
 
 ## 基本操作
 
 1. **メッセージ送信**: 画面下部の入力欄にテキストを入力してEnterキー
 2. **会話履歴**: 自動的にスクロールされる会話履歴を確認
 3. **アバター**: AIの応答中はアバターが応答アニメーション
+4. **設定変更**: アバター画像をクリックすると設定モーダルが開き、各種設定を変更できます。
 
 ## クイックスタート
 
@@ -29,6 +34,8 @@
 
 - Python 3.8以上
 - Google AI Studio APIキー（[取得はこちら](https://aistudio.google.com/app/apikey)）
+- vsay: 音声合成に使用します。`./bin/vsay`として配置し、実行権限を付与してください。[こちら](https://github.com/Dotinkasra/vsay)からインストールできます。
+- [AivisSpeach](https://aivis-project.com/) または [VOICEVOX](https://voicevox.hiroshiba.jp/) の engine（音声合成を使用する場合）
 
 ### インストール手順
 
@@ -89,23 +96,33 @@ SERVER_HOST=0.0.0.0
 DEBUG_MODE=False
 ```
 
-##### Google Geminiを使用する場合
+##### AIプロバイダーの選択
+`AI_PROVIDER`で`gemini`または`ollama`を選択します。
+
+###### Google Geminiを使用する場合
 
 ```bash
-# 以下の項目を設定してください。（他の項目はデフォルト値で動作）
 AI_PROVIDER=gemini
 GEMINI_API_KEY=ここに取得したAPIキーを貼り付け
-MODEL_NAME=gemini-2.0-flash  # または gemini-2.5-pro など
+MODEL_NAME=gemini-1.5-flash-latest  # または gemini-1.5-pro-latest など
 ```
 
-##### Ollamaを使用する場合
+###### Ollamaを使用する場合
 
 ```bash
-# 以下の項目を設定してください。（他の項目はデフォルト値で動作）
 AI_PROVIDER=ollama
-OLLAMA_HOST=ollamaをホストしているマシンのIPアドレス
-MODEL_NAME=gemma3:12b # その他インストール済みのモデル名
+OLLAMA_HOST=ollamaをホストしているマシンのIPアドレス（例: http://localhost:11434 または http://host.docker.internal:11434 (Docker利用時)）
+MODEL_NAME=llama3:latest # その他インストール済みのモデル名
 ```
+
+#### 3. AIペルソナ設定
+
+AIの性格、アバター画像、音声設定は`prompt_settings/`ディレクトリ内のJSONファイルで管理されます。  
+ペルソナごとのJSONファイルを作成することで複数のペルソナを管理可能です。
+
+- `prompt_settings/Spectra.json`: デフォルトのペルソナ設定
+
+これらのファイルを直接編集するか、アプリケーションのUIから設定モーダルを開いて変更できます。
 
 **重要**: `.env`ファイルには機密情報が含まれるため、絶対にGitにコミットしないでください。
 
@@ -131,6 +148,8 @@ avatar-ui-core/
 ├── settings.py             # 設定管理モジュール
 ├── requirements.txt        # Python依存関係
 ├── .env.example           # 環境変数テンプレート
+├── prompt_settings/       # AIペルソナ設定ファイル
+│   ├── Spectra.json
 ├── static/
 │   ├── css/
 │   │   └── style.css      # UIスタイル定義
@@ -140,9 +159,10 @@ avatar-ui-core/
 │   │   ├── animation.js   # アニメーション制御
 │   │   ├── sound.js       # 音響効果
 │   │   └── settings.js    # フロントエンド設定
-│   └── images/
-│       ├── idle.png       # アバター（静止）
-│       └── talk.png       # アバター（発話）
+│   ├── images/
+│   │   ├── idle.png       # アバター（静止）
+│   │   └── talk.png       # アバター（発話）
+│   └── audio/             # 生成された音声ファイル
 └── templates/
     └── index.html         # HTMLテンプレート
 ```
@@ -151,72 +171,90 @@ avatar-ui-core/
 
 ## カスタマイズ方法
 
-すべての設定は`.env`ファイルで調整できます。
+ほとんどの設定はUIから変更可能です。  
 
-### 1. アバターの変更
+![Settings Interface](docs/assets/setting-ui.png)
 
-画像ファイルを差し替える
-- `static/images/idle.png`: 静止時のアバター（推奨: 140x140px）
-- `static/images/talk.png`: 発話時のアバター（推奨: 140x140px）
+### 1. AIペルソナのカスタマイズ
 
-### 2. AIの人格設定
-`.env`ファイルで以下の項目を編集：
-```bash
-AVATAR_NAME=Spectra
-AVATAR_FULL_NAME=Spectra Communicator
-SYSTEM_INSTRUCTION=あなたはSpectraというAIアシスタントです。技術的で直接的なスタイルで簡潔に応答してください。回答は短く要点を押さえたものにしてください。
+`prompt_settings/`ディレクトリ内のJSONファイルを編集するか、アプリケーションのUI（アバター画像クリックで開く設定モーダル）から「AI Persona」を選択し、各種設定を調整してください。
+
+- `avatarName`: AIアシスタントの名前
+- `avatarFullName`: AIアシスタントのフルネーム
+- `systemInstruction`: AIの人格や応答スタイルを定義するプロンプト
+- `avatarImageIdle`: 静止時のアバター画像ファイル名（`static/images/`からの相対パス）
+- `avatarImageTalk`: 発話時のアバター画像ファイル名（`static/images/`からの相対パス）
+- `vsayOptions`: 音声合成コマンド`vsay`のオプション（Speed, Pitchなど）
+
+```json
+//prompt_settings/persona-name.json
+{
+  "avatarName": "ペルソナの名前",
+  "avatarFullName": "チャットの一番上に出てくるメッセージ",
+  "systemInstruction": "システムプロンプト",
+  "avatarImageIdle": "口を閉じてる画像の名前",
+  "avatarImageTalk": "口を開いている画像の名前",
+  "vsayOptions": {
+    "host": "http://localhost", //AivisSpeachまたはVOICEVOXのengineが起動しているホストのアドレス
+    "port": 10101, //ポート番号
+    "id": 0, //スタイルID（"number"と"style"が設定されている場合は不要）
+    "number": 0, //話者ID（"id"が設定されている場合は不要)
+    "style": 0, //vsay lsで表示されるスタイルID（"id"が設定されている場合は不要)
+    "intonation": 1.0, 
+    "pitch": 0.0,
+    "speed": 1.1,
+    "tempo": 1.0
+  }
+}
+
 ```
 
-### 3. UI動作の調整
-`.env`ファイルで各種速度を調整：
-```bash
-# タイピング速度（ミリ秒、小さいほど高速）
-TYPEWRITER_DELAY_MS=30
+### 2. タイプライター音のON/OFF
 
-# 口パクアニメーション間隔（ミリ秒）
-MOUTH_ANIMATION_INTERVAL_MS=100
-```
+アプリケーションのUI（アバター画像クリックで開く設定モーダル）から「Typewriter Effect」のON/OFFを切り替えられます。
 
-### 4. サウンド設定
-`.env`ファイルで音響効果をカスタマイズ：
-```bash
-BEEP_FREQUENCY_HZ=600   # 音の高さ（Hz）
-BEEP_VOLUME=0.1         # 音量（0.0-1.0）
-BEEP_DURATION_MS=30     # 音の長さ（ミリ秒）
-```
+### 3. ボイス再生のON/OFF
 
-**注意**: 設定変更後はアプリケーションの再起動が必要です。
+アプリケーションのUI（アバター画像クリックで開く設定モーダル）から「Voice Playback」のON/OFFを切り替えられます。
+
+### 4. vsayオプションの調整
+
+アプリケーションのUI（アバター画像クリックで開く設定モーダル）から「Speed」「Pitch」などのスライダーやテキスト入力で`vsay`コマンドのオプションを調整できます。設定は現在のペルソナに保存されます。
+
+### 5. その他の設定
+
+`settings.py`で以下の項目を編集：
+
+- `TYPEWRITER_DELAY_MS`: タイプライター効果の速度（ミリ秒、小さいほど高速）
+- `MOUTH_ANIMATION_INTERVAL_MS`: 口パクアニメーション間隔（ミリ秒）
+- `BEEP_FREQUENCY_HZ`: ビープ音の周波数（Hz）
+- `BEEP_VOLUME`: ビープ音の音量（0.0-1.0）
+- `BEEP_DURATION_MS`: ビープ音の長さ（ミリ秒）
+- `BEEP_VOLUME_END`: ビープ音終了時の音量
+
+**注意**: `settings.py`の変更後はアプリケーションの再起動が必要です。
 
 ## 環境変数一覧
 
 | 変数名 | 説明 | デフォルト値 | 必須 |
 |--------|------|-------------|------|
-| `GEMINI_API_KEY` | Google Gemini APIキー | - | ✅ |
-| `MODEL_NAME` | 使用するGeminiモデル | gemini-2.0-flash | ✅ |
-| **サーバー設定** | | | |
-| `SERVER_PORT` | サーバーポート番号 | 5000 | |
-| `DEBUG_MODE` | デバッグモード有効化 | True | |
-| **アバター設定** | | | |
-| `AVATAR_NAME` | AIアシスタントの名前 | Spectra | |
-| `AVATAR_FULL_NAME` | AIアシスタントのフルネーム | Spectra Communicator | |
-| `AVATAR_IMAGE_IDLE` | 静止時のアバター画像 | idle.png | |
-| `AVATAR_IMAGE_TALK` | 発話時のアバター画像 | talk.png | |
-| **AI性格設定** | | | |
-| `SYSTEM_INSTRUCTION` | AIの人格や応答スタイル | 技術的で簡潔な応答 | |
-| **UI設定** | | | |
-| `TYPEWRITER_DELAY_MS` | タイプライター効果の速度（ミリ秒） | 50 | |
-| `MOUTH_ANIMATION_INTERVAL_MS` | 口パクアニメーション間隔（ミリ秒） | 150 | |
-| **サウンド設定** | | | |
-| `BEEP_FREQUENCY_HZ` | ビープ音の周波数（Hz） | 800 | |
-| `BEEP_DURATION_MS` | ビープ音の長さ（ミリ秒） | 50 | |
-| `BEEP_VOLUME` | ビープ音の音量（0.0-1.0） | 0.05 | |
-| `BEEP_VOLUME_END` | ビープ音終了時の音量 | 0.01 | |
+| `AI_PROVIDER` | 使用するAIプロバイダー (`gemini` または `ollama`) | `gemini` | ✅ |
+| `GEMINI_API_KEY` | Google Gemini APIキー | - | `AI_PROVIDER`が`gemini`の場合 |
+| `OLLAMA_HOST` | OllamaサーバーのホストURL | - | `AI_PROVIDER`が`ollama`の場合 | 
+| `MODEL_NAME` | 使用するAIモデル名 | `gemini-1.5-flash-latest` または `llama3:latest` | ✅ |
+| `SERVER_HOST` | サーバーアドレス | `127.0.0.1` | |
+| `SERVER_PORT` | サーバーポート番号 | `5000` | |
+| `DEBUG_MODE` | デバッグモード有効化 | `True` | |
+| `FLASK_SECRET_KEY` | Flaskセッションの秘密鍵 | ランダム生成 | |
+
+**注意**: `AVATAR_NAME`、`SYSTEM_INSTRUCTION`などのAI関連設定は、`prompt_settings/`ディレクトリ内のペルソナJSONファイルで管理されるようになりました。
 
 ## 技術スタック
 
 ### バックエンド
 - **Flask 3.0.0** - Webアプリケーションフレームワーク
 - **google-generativeai 0.8.3** - Gemini API統合
+- **ollama** - OllamaローカルAIモデル統合
 - **python-dotenv 1.0.0** - 環境変数管理
 
 ### フロントエンド
@@ -229,6 +267,8 @@ BEEP_DURATION_MS=30     # 音の長さ（ミリ秒）
 
 - 本プロジェクトはネイキッド版UI基盤として提供されており、デフォルト実装は単一ユーザー利用を前提としています。
 - APIキーなどの秘密情報は `.env` に保存され、サーバー内でのみ利用されます。
+- **vsayコマンドの実行権限**: `vsay`コマンドには実行権限が必要です。`chmod +x ./bin/vsay`で権限を付与してください。
+- **生成される音声ファイル**: `static/audio/`ディレクトリに一時的な音声ファイルが生成されます。これらのファイルは、次のチャットリクエスト時、またはアプリケーション起動時に自動的に削除されます。
 - 個人利用・学習用途ではそのままご利用いただけますが、不特定多数に公開する場合は
   - ユーザーごとの設定保存
   - 認証機構の追加
